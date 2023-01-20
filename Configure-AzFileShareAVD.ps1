@@ -45,7 +45,7 @@ If (Test-Path $installdir) {
 
 # Download and expand AzHybridFiles PS Module
 Invoke-WebRequest -Uri $uri -OutFile $dlfile
-Expand-Archive -Path $dlfile -DestinationPath $installdir
+Expand-Archive -Path $installer -DestinationPath $installdir
 
 # Navigate to where AzFilesHybrid is unzipped and stored and run to copy the files into your path
 .\CopyToPSPath.ps1 

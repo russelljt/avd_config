@@ -26,19 +26,22 @@ $onedrivereq = "Y" # OneDrive machine installation required (Y/N)
 $aztenantid = "" # Azure Tenant ID
 
 # None of these variables should need to change
-$uri = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117" # Need to find correct download link
-$dlfile = "c:\temp\ODT\ODT.exe"
+$uri = "https://github.com/russelljt/avd_config/raw/master/odt_avd.zip" # Need to find correct download link
+$dlfile = "c:\temp\ODT\odt_avd.zip"
 $installdir = "c:\temp\ODT"
 
 If (Test-Path $installdir) {
     Write-Host "Directory exists, proceeding with installation"
 } Else {
     New-Item $installdir -ItemType Directory
-    Write-Host "Directory does not exist, creating and downloading installer"
-    Invoke-WebRequest -Uri $uri -OutFile $dlfile
+    Write-Host "Directory does not exist, creating"
 }
 
-Start-Process -FilePath $dlfile -ArgumentList "/quiet /extract:$installdir"
+Write-host = "Downloading and extracting ODT"
+Invoke-WebRequest -Uri $uri -OutFile $dlfile
+Expand-Archive -Path $dlfile -DestinationPath $installdir
+
+Write-Host = "Launching ODT installation"
 Start-Process -FilePath $installdir\setup.exe -ArgumentList "/configure avdconfig.xml"
 
 ####### OneDrive download and install block below #######
