@@ -42,20 +42,42 @@ Invoke-WebRequest -Uri $uri -OutFile $dlfile
 Expand-Archive -Path $dlfile -DestinationPath $installdir
 
 Write-Host = "Launching ODT installation"
-Start-Process -FilePath $installdir\setup.exe -ArgumentList "/configure avdconfig.xml"
+Start-Process -FilePath $installdir\setup.exe -ArgumentList "/configure $installdir\avdconfig.xml"
 
 ####### OneDrive download and install block below #######
-
+$regpath = "HKLM:\Software\Microsoft\OneDrive"
 Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=844652" -OutFile $installdir\OneDriveSetup.exe
 
-Start-Process -Path $installdir/OneDriveSetup.exe -ArgumentList "/allusers"
+if (!(test-path $regpath)){
+  Write-Host "OneDrive registry key does not exist, creating"  
+  New-Item -Path $regpath -Force | Out-Null
+} else {
+  Write-Host "OneDrive registry key exists, proceeding with installation"
+}
 
-<#
-REG ADD "HKLM\Software\Microsoft\OneDrive" /v "AllUsersInstall" /t REG_DWORD /d 1 /reg:64
-REG ADD "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v OneDrive /t REG_SZ /d "C:\Program Files (x86)\Microsoft OneDrive\OneDrive.exe /background" /f
+# Add allUsersInstall option to registry and kick off install
+& REG ADD "HKLM\Software\Microsoft\OneDrive" /v "AllUsersInstall" /t REG_DWORD /d 1 /reg:64
+Start-Process -FilePath $installdir/OneDriveSetup.exe -ArgumentList "/allusers"
 
-REG ADD "HKLM\SOFTWARE\Policies\Microsoft\OneDrive" /v "SilentAccountConfig" /t REG_DWORD /d 1 /f
-REG ADD "HKLM\SOFTWARE\Policies\Microsoft\OneDrive" /v "KFMSilentOptIn" /t REG_SZ /d "<your-AzureAdTenantId>" /f
-#>
+# Set onedrive to start at launch, silent user configuration, and opt into KFM silently
+& REG ADD "HKLM\Software\Microsoft\Windows\CurrentVersion\Run" /v OneDrive /t REG_SZ /d "C:\Program Files (x86)\Microsoft OneDrive\OneDrive.exe /background" /f
+& REG ADD "HKLM\SOFTWARE\Policies\Microsoft\OneDrive" /v "SilentAccountConfig" /t REG_DWORD /d 1 /f
+& REG ADD "HKLM\SOFTWARE\Policies\Microsoft\OneDrive" /v "KFMSilentOptIn" /t REG_SZ /d "$aztenantid" /f
 
 ####### Teams download and install block below #######
+if ($teamsreq -eq "Y"){
+  Write-Host "Teams required, installing Teams and prerequisites"
+  Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" -OutFile $installdir\vc_redist.x64.exe
+  Invoke-WebRequest -Uri "https://aka.ms/msrdcwebrtcsvc/msi" -OutFile $installdir\WebRTCSvc.msi
+  Invoke-WebRequest -Uri "https://teams.microsoft.com/downloads/desktopurl?env=production&plat=windows&arch=x64&managedInstaller=true&download=true" -OutFile $installdir\Teams_install.msi
+  
+  Start-Process -FilePath $installdir\vc_redist.x64.exe -ArgumentList "/Quiet" -Wait
+  Start-Process "msiexec.exe"-ArgumentList "/i $installdir\WebRTCSvc.msi /l*v $installdir\WebRTC.log /qn" -Wait
+  
+  & reg add "HKLM\SOFTWARE\Microsoft\Teams" /v IsWVDEnvironment /t REG_DWORD /d 1 /f
+  Start-Process "msiexec.exe" -ArgumentList "/i $installdir\Teams_install.msi /l*v $installdir\Teams.log /qn ALLUSER=1 ALLUSERS=1"
+} Else {
+  Write-Host "Teams not required, skipping install"
+}
+
+Restart-Computer -Force
