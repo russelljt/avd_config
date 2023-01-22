@@ -8,4 +8,4 @@ After creating a storage account and share to host FSLogix profile data, Configu
 
 Configure-FSLogix.ps1 installs and configures basic profile container settings for the profile container agent.
 
-Configure-OfficeAVD.ps1 will run the Office Deployment Tool using the included avdconfig.xml, install OneDrive for all users, install Teams, and set all registry settings for a multi-session host.
+Configure-OfficeAVD.ps1 will run the Office Deployment Tool using the included avdconfig.xml, install OneDrive for all users, install Teams and prereqs (optional), and set all registry settings for a multi-session host. 
